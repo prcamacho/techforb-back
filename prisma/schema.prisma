@@ -16,6 +16,36 @@ datasource db {
 model User{
   id Int @id @default(autoincrement())
   email String @unique
-  passsword String
-  
+  passswordHash String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AlertType{
+  id Int @id
+  tipo String @unique
+  alerts Alert[]
+}
+
+model Plant{
+  id Int @id
+  name String
+  country String
+  alerts Alert[]
+}
+
+model AlertSeverity {
+  id Int @id
+  severity String
+  alerts Alert[]
+}
+
+model Alert{
+  id Int @id @default(autoincrement())
+  plantId Int
+  plant Plant @relation(fields: [plantId], references: [id])
+  alertTypeId Int
+  alertType AlertType @relation(fields: [alertTypeId], references: [id])
+  alertSeverityId Int
+  alertSeverity AlertSeverity @relation(fields: [alertSeverityId], references: [id])
 }
