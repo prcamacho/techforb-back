@@ -22,21 +22,21 @@ model User{
 }
 
 model AlertType{
-  id Int @id
+  id Int @id @default(autoincrement())
   tipo String @unique
   alerts Alert[]
 }
 
 model Plant{
-  id Int @id
-  name String
+  id Int @id @default(autoincrement())
+  name String @unique
   country String
   alerts Alert[]
 }
 
 model AlertSeverity {
-  id Int @id
-  severity String
+  id Int @id @default(autoincrement())
+  severity String @unique
   alerts Alert[]
 }
 
