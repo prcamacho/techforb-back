@@ -2,6 +2,7 @@ import express from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import cors from "cors";
 import * as dotenv from "dotenv";
 dotenv.config();
 
@@ -9,7 +10,7 @@ const prisma = new PrismaClient();
 const app = express();
 const port = 3000;
 
-app.use(express.json());
+app.use(cors(),express.json());
 
 app.get("/", (req, res) => {
   res.send(`
