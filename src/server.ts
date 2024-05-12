@@ -16,6 +16,38 @@ app.get('/', (req, res) => {
     <html>
       <body>
         <h1>Backend de proyecto TechForB by Pablo Camacho</h1>
+        <ul>
+        <li>Usar Body - raw - json en Postman</li>
+        
+        <br><strong>Registrarse</strong>
+        <li>email , password Post: https://techforb-back.pablocamacho.com.ar/register</li>
+        <br><strong>Loguearse</strong>
+        <li>email , password Post: https://techforb-back.pablocamacho.com.ar/login</li>
+        <br><strong>Obtener alertas por tipo "niveles" , "viento", etc</strong> 
+        <li>Get: https://techforb-back.pablocamacho.com.ar/alerts/tension </li>
+        <br><strong>Cargar Planta con nombre y pais</strong>
+        <li>name, country Post: https://techforb-back.pablocamacho.com.ar/plants</li>
+        <br><strong>Editar una planta para agregarle severidades de alertas</strong>
+        <li>"name": "Nombre de la planta",
+        "country": "País de la planta",
+        "alertSeverities": [
+          {
+            "severity": "Puede ser ok, media, roja",
+            "count": "Cantidad de alertas de esta severidad"
+          },
+          ... Se puede mandar de las 3 severidades al mismo tiempo
+        ]
+      } Post: https://techforb-back.pablocamacho.com.ar/createAlerts</li>
+      <br><strong>Obetener alertas por severidad</strong>
+      <li>"ok" , "media" , "roja" Get: https://techforb-back.pablocamacho.com.ar/alerts/severity/:severity</li>
+      <br><strong>Obtener el total de alertas y cantidad de cada severidad por planta</strong>
+      <li>Para armar la tablota de severity por planta Get: https://techforb-back.pablocamacho.com.ar/plants/alerts</li>
+      <br><strong>Borra alertas y planta de la BD</strong>
+      <li>Para Borrar Delete: https://techforb-back.pablocamacho.com.ar/plants/:name</li>
+      <br><strong>Pendiente</strong>
+      <li>No borrar de la BD solo desactivar, agregar nombre al registrarse</li>
+        
+      </ul>
       </body>
     </html>
   `);
@@ -170,6 +202,89 @@ app.post('/createAlerts', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: 'Ocurrio un error en la creacion de alertas' });
   }
+});
+
+app.get('/alerts/severity/:severity', async (req, res) => {
+  const { severity } = req.params;
+
+  const alertSeverity = await prisma.alertSeverity.findUnique({
+    where: {
+      severity: severity,
+    },
+  });
+
+  if (!alertSeverity) {
+    return res.status(404).json({ error: 'Severidad de alerta no encontrada' });
+  }
+
+  const alerts = await prisma.alert.findMany({
+    where: {
+      alertSeverityId: alertSeverity.id,
+    },
+  });
+
+  res.json({ count: alerts.length });
+});
+
+app.get('/plants/alerts', async (req, res) => {
+  try {
+    const plants = await prisma.plant.findMany({
+      include: {
+        alerts: {
+          include: {
+            alertSeverity: true,
+          },
+        },
+      },
+    });
+
+    const plantAlerts = plants.map((plant) => {
+      const severityCounts = plant.alerts.reduce((counts: Record<string, number>, alert) => {
+        if (!counts[alert.alertSeverity.severity]) {
+          counts[alert.alertSeverity.severity] = 0;
+        }
+        counts[alert.alertSeverity.severity]++;
+        return counts;
+      }, {} as Record<string, number>);
+
+      return {
+        name: plant.name,
+        country: plant.country,
+        totalAlerts: plant.alerts.length,
+        severityCounts,
+      };
+    });
+
+    res.json(plantAlerts);
+  } catch (error) {
+    res.status(500).json({ error: 'An error occurred while fetching alerts' });
+  }
+});
+
+app.delete('/plants/:name', async (req, res) => {
+  const { name } = req.params;
+
+  const plant = await prisma.plant.findUnique({
+    where: {
+      name,
+    },
+  });
+
+  if (!plant) {
+    return res.status(404).json({ error: 'Planta no encontrada' });
+  }
+  await prisma.alert.deleteMany({
+    where: {
+      plantId: plant.id,
+    },
+  });
+  await prisma.plant.delete({
+    where: {
+      id: plant.id,
+    },
+  });
+
+  res.json({ message: 'Planta y sus alertas eliminadas con éxito' });
 });
 
 app.listen(port, () => {
