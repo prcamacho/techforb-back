@@ -123,6 +123,49 @@ app.post("/login", async (req, res) => {
   }
 });
 
+app.get('/auth/check-token', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+      return res.status(401).json({ message: 'No se proporcionó el token' });
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    if (!process.env.JWT_SECRET_KEY) {
+      throw new Error('La llave secreta de JWT no está definida');
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET_KEY, async (err, decoded) => {
+      if (err) {
+        return res.status(401).json({ message: 'Token inválido' });
+      }
+
+      if (!decoded || typeof decoded !== 'object') {
+        return res.status(401).json({ message: 'Token inválido' });
+      }
+      const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+
+      if (!user) {
+        return res.status(404).json({ message: 'Usuario no encontrado' });
+      }
+
+      res.json({
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          createdAt: user.createdAt,
+          updatedAt: user.updatedAt,
+        },
+      });
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Ocurrió un error al verificar el token' });
+  }
+});
+
 app.get("/alerts/:type", async (req, res) => {
   const { type } = req.params;
   const alertType = await prisma.alertType.findUnique({
@@ -161,6 +204,16 @@ app.get("/alerts/:type", async (req, res) => {
 app.post("/plants", async (req, res) => {
   const { name, country } = req.body;
 
+  const existingPlant = await prisma.plant.findUnique({
+    where: {
+      name: name,
+    },
+  });
+
+  if (existingPlant) {
+    return res.status(400).json({ error: `La planta ${name} ya existe` });
+  }
+
   const newPlant = await prisma.plant.create({
     data: {
       name: name,
@@ -170,6 +223,7 @@ app.post("/plants", async (req, res) => {
 
   res.json(newPlant);
 });
+
 
 app.post("/createAlerts", async (req, res) => {
   const { name, country, alertSeverities } = req.body;
