@@ -1,4 +1,6 @@
 {
+
+
     "dependencies": {
         "@prisma/client": "^5.13.0",
         "@types/node": "^20.12.11",
@@ -20,7 +22,7 @@
         "prisma": "^5.13.0"
     },
     "scripts": {
-        "start": "node src/server.ts",
-        "dev": "nodemon src/server.ts"
+        "start": "node src/server.js",
+        "dev": "nodemon src/server.js"
     }
 }
